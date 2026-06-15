@@ -1,0 +1,26 @@
+# docker/docker-compose.yml
+version: '3.8'
+
+services:
+  # Service to execute the Snakemake data processing pipeline
+  pipeline:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    volumes:
+      - ..:/app
+    entrypoint: ["snakemake", "--cores", "1"]
+
+  # Service to expose the Plumber REST API
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8085:8085"
+    volumes:
+      - ..:/app
+    entrypoint: ["Rscript", "api/app.R"]
+    depends_on:
+      pipeline:
+        condition: service_completed_successfully

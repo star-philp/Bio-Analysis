@@ -1,0 +1,59 @@
+========================================================
+LINEAR REGRESSION MODEL: CHOLESTEROL PREDICTION
+========================================================
+
+Call:
+lm(formula = cholesterol ~ prs_standardized + age + gender + 
+    bmi, data = merged_df)
+
+Residuals:
+   Min     1Q Median     3Q    Max 
+-80.54 -14.09  -0.04  13.62  68.65 
+
+Coefficients:
+                  Estimate Std. Error t value Pr(>|t|)    
+(Intercept)      157.75504    2.66264  59.248   <2e-16 ***
+prs_standardized   0.32894    0.42949   0.766    0.444    
+age                0.77628    0.02467  31.472   <2e-16 ***
+genderM           -0.59318    0.85813  -0.691    0.489    
+bmi                1.32297    0.09357  14.138   <2e-16 ***
+---
+Signif. codes:  0 ‘***’ 0.001 ‘**’ 0.01 ‘*’ 0.05 ‘.’ 0.1 ‘ ’ 1
+
+Residual standard error: 21.43 on 2494 degrees of freedom
+Multiple R-squared:  0.3198,	Adjusted R-squared:  0.3187 
+F-statistic: 293.2 on 4 and 2494 DF,  p-value: < 2.2e-16
+
+
+
+========================================================
+MIXED EFFECTS MODEL: RANDOM INTERCEPT BY AGE DECADE
+========================================================
+Linear mixed-effects model fit by REML
+  Data: merged_df 
+       AIC      BIC    logLik
+  22466.98 22501.91 -11227.49
+
+Random effects:
+ Formula: ~1 | age_group
+        (Intercept) Residual
+StdDev:    16.32823 21.50498
+
+Fixed effects:  cholesterol ~ prs_standardized + bmi + gender 
+                     Value Std.Error   DF   t-value p-value
+(Intercept)      200.18292  6.606813 2489 30.299468  0.0000
+prs_standardized   0.42033  0.431689 2489  0.973688  0.3303
+bmi                1.30830  0.093982 2489 13.920700  0.0000
+genderM           -0.63103  0.862874 2489 -0.731314  0.4647
+ Correlation: 
+                 (Intr) prs_st bmi   
+prs_standardized -0.005              
+bmi              -0.340  0.007       
+genderM          -0.068  0.032  0.015
+
+Standardized Within-Group Residuals:
+        Min          Q1         Med          Q3         Max 
+-3.78567077 -0.66447659 -0.01042279  0.64968999  3.27078983 
+
+Number of Observations: 2499
+Number of Groups: 7 

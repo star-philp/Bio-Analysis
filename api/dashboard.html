@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bio-Analysis 통합 모니터링 & 테스트 대시보드</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --card-bg: #151b2c;
+            --border-color: #242f4c;
+            --text-primary: #f8fafc;
+            --text-secondary: #94a3b8;
+            --primary: #3b82f6;
+            --primary-glow: rgba(59, 130, 246, 0.15);
+            --neon-blue: #00f2fe;
+            --neon-green: #00f5a0;
+            --neon-red: #ff5e62;
+            --font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: var(--font-family);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            background: linear-gradient(180deg, rgba(21, 27, 44, 0.8) 0%, rgba(11, 15, 25, 0) 100%);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            padding: 20px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .header-title h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 0;
+            background: linear-gradient(90deg, var(--neon-blue), #4f46e5);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-status {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .status-badge {
+            padding: 6px 16px;
+            border-radius: 9999px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid transparent;
+        }
+
+        .status-online {
+            background-color: rgba(0, 245, 160, 0.1);
+            color: var(--neon-green);
+            border-color: rgba(0, 245, 160, 0.2);
+        }
+
+        .status-offline {
+            background-color: rgba(255, 94, 98, 0.1);
+            color: var(--neon-red);
+            border-color: rgba(255, 94, 98, 0.2);
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 30px auto;
+            padding: 0 40px;
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 30px;
+            flex-grow: 1;
+        }
+
+        aside {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        main {
+            display: flex;
+            flex-direction: column;
+            gap: 35px;
+        }
+
+        .card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .card:hover {
+            box-shadow: 0 8px 32px 0 var(--primary-glow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+            color: white;
+            border: none;
+            padding: 10px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #10b981 0%, #047857 100%);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-success:hover {
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+        }
+
+        .btn-secondary {
+            background: #1e293b;
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            box-shadow: none;
+        }
+
+        .btn-secondary:hover {
+            background: #334155;
+            color: var(--text-primary);
+        }
+
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .file-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 14px;
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 0.85rem;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        .file-status {
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+        }
+
+        .status-pass {
+            background-color: rgba(16, 185, 129, 0.15);
+            color: var(--neon-green);
+        }
+
+        .status-fail {
+            background-color: rgba(239, 68, 68, 0.15);
+            color: var(--neon-red);
+        }
+
+        .grid-db-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .stat-box {
+            background-color: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--neon-blue);
+            margin-top: 5px;
+        }
+
+        .stat-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        .db-info-row {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .db-info-val {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        /* Test Runner Dashboard styles */
+        .test-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .test-card {
+            background-color: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .test-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 4px;
+            width: 100%;
+        }
+
+        .test-card.pass::before {
+            background-color: var(--neon-green);
+        }
+
+        .test-card.fail::before {
+            background-color: var(--neon-red);
+        }
+
+        .test-card.unchecked::before {
+            background-color: var(--text-secondary);
+        }
+
+        .test-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .test-msg {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .test-badge {
+            align-self: flex-start;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+        }
+
+        /* Patient Viewer Styles */
+        .patient-viewer-layout {
+            display: grid;
+            grid-template-columns: 350px 1fr;
+            gap: 25px;
+            height: 600px;
+        }
+
+        .patient-search-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            background-color: rgba(255, 255, 255, 0.01);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+        }
+
+        .select-patient {
+            width: 100%;
+            background-color: #1e293b;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            padding: 10px;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .patient-quick-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            font-size: 0.85rem;
+        }
+
+        .patient-stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 6px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+
+        .iframe-container {
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            overflow: hidden;
+            background-color: white;
+            position: relative;
+            height: 100%;
+        }
+
+        .iframe-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Terminal Console */
+        .terminal-container {
+            background-color: #05070c;
+            border: 1px solid #1a2236;
+            border-radius: 8px;
+            padding: 16px;
+            font-family: "Courier New", Courier, monospace;
+            font-size: 0.8rem;
+            color: var(--neon-green);
+            height: 150px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.8);
+        }
+
+        footer {
+            text-align: center;
+            padding: 30px;
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            border-top: 1px solid var(--border-color);
+            margin-top: 50px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-title">
+            <span style="font-size: 1.8rem;">🧬</span>
+            <div>
+                <h1>Bio-Analysis 통합 모니터링 & 테스트 대시보드</h1>
+                <span style="font-size: 0.75rem; color: var(--text-secondary);">Full Spectrum Biomedical Pipeline Monitor</span>
+            </div>
+        </div>
+        <div class="header-status">
+            <div id="connection-status" class="status-badge status-online">
+                <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:var(--neon-green);"></span>
+                API Server: PORT 8085
+            </div>
+        </div>
+    </header>
+
+    <div class="container">
+        
+        <!-- Sidebar -->
+        <aside>
+            
+            <!-- System Status Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">💾 시스템 상태 & 파일</h2>
+                </div>
+                <div class="file-list" id="file-status-list">
+                    <!-- Dynamic files status -->
+                    <div style="text-align:center; color:var(--text-secondary);">로딩 중...</div>
+                </div>
+            </div>
+
+            <!-- Database statistics Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🗄️ SQLite DB 통계</h2>
+                </div>
+                <div class="grid-db-stats">
+                    <div class="stat-box">
+                        <div class="stat-label">등록 환자수</div>
+                        <div class="stat-value" id="db-stat-patients">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-label">PRS 점수수</div>
+                        <div class="stat-value" id="db-stat-prs">-</div>
+                    </div>
+                </div>
+                <div class="db-info-row">
+                    <span>마지막 파이프라인 런 ID</span>
+                    <span class="db-info-val" id="db-stat-runid">-</span>
+                </div>
+                <div class="db-info-row">
+                    <span>최종 실행일자</span>
+                    <span class="db-info-val" id="db-stat-runtime">-</span>
+                </div>
+                <div class="db-info-row">
+                    <span>최종 파이프라인 상태</span>
+                    <span class="db-info-val" id="db-stat-runstatus" style="color:var(--neon-green); font-weight:700;">-</span>
+                </div>
+            </div>
+
+            <!-- Pipeline Execution Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⛓️ 파이프라인 제어</h2>
+                </div>
+                <p style="font-size:0.75rem; color:var(--text-secondary); margin-top:0; margin-bottom:15px;">
+                    Snakemake 워크플로우를 강제로 전체 재실행(Force-Run)하여 데이터를 갱신합니다.
+                </p>
+                <button class="btn btn-success" id="btn-run-pipeline" style="width: 100%;">
+                    <span>🚀</span> 파이프라인 재실행 (Snakemake)
+                </button>
+            </div>
+
+        </aside>
+
+        <!-- Main Area -->
+        <main>
+            
+            <!-- System Test Runner Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">🧪 시스템 무결성 자동 테스트 (지속적 통합 검증)</h2>
+                    <button class="btn" id="btn-run-tests">
+                        <span>🔄</span> 테스트 실행
+                    </button>
+                </div>
+                
+                <div class="test-list" id="test-runner-list">
+                    <!-- Dynamic test cards -->
+                    <div class="test-card unchecked">
+                        <div class="test-name">1. Ingestion Files</div>
+                        <div class="test-msg">원 데이터 유효성 테스트 검사 전입니다.</div>
+                        <span class="test-badge" style="background-color:rgba(255,255,255,0.05); color:var(--text-secondary);">UNCHECKED</span>
+                    </div>
+                    <div class="test-card unchecked">
+                        <div class="test-name">2. VCF Annotation</div>
+                        <div class="test-msg">bcftools 변이 ID 어노테이션 검사 전입니다.</div>
+                        <span class="test-badge" style="background-color:rgba(255,255,255,0.05); color:var(--text-secondary);">UNCHECKED</span>
+                    </div>
+                    <div class="test-card unchecked">
+                        <div class="test-name">3. PRS Calculations</div>
+                        <div class="test-msg">PLINK PRS 프로파일 계산 검사 전입니다.</div>
+                        <span class="test-badge" style="background-color:rgba(255,255,255,0.05); color:var(--text-secondary);">UNCHECKED</span>
+                    </div>
+                    <div class="test-card unchecked">
+                        <div class="test-name">4. Statistical Modeling</div>
+                        <div class="test-msg">R 선형 회귀 & 선형 혼합 효과 모델 검사 전입니다.</div>
+                        <span class="test-badge" style="background-color:rgba(255,255,255,0.05); color:var(--text-secondary);">UNCHECKED</span>
+                    </div>
+                    <div class="test-card unchecked">
+                        <div class="test-name">5. SQLite Database</div>
+                        <div class="test-msg">데이터 적재 상태 및 인덱싱 무결성 검사 전입니다.</div>
+                        <span class="test-badge" style="background-color:rgba(255,255,255,0.05); color:var(--text-secondary);">UNCHECKED</span>
+                    </div>
+                </div>
+                
+                <div class="terminal-container" id="terminal-log">대시보드가 실행되었습니다. 시스템 모니터링 로그가 여기에 출력됩니다.</div>
+            </div>
+
+            <!-- Snakemake DAG Monitor Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">⛓️ Snakemake 실시간 의존성 DAG 모니터</h2>
+                    <span style="font-size:0.75rem; color:var(--text-secondary);">파일 타임스탬프 기반 의존성 트래킹</span>
+                </div>
+                <div style="background-color:#05070c; border:1px solid #1a2236; border-radius:12px; padding: 25px; display:flex; justify-content:center; align-items:center; min-height:240px; overflow:auto;">
+                    <div id="dag-container" class="mermaid" style="width:100%;">
+                        <!-- Mermaid diagram will render here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Report Viewer Card -->
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👤 환자별 맞춤 유전체 건강성적표 실시간 조회</h2>
+                </div>
+                <div class="patient-viewer-layout">
+                    <div class="patient-search-panel">
+                        <label for="patient-select" style="font-size:0.85rem; font-weight:600; color:var(--text-secondary);">환자 ID 선택 (VCF 샘플 매칭)</label>
+                        <select id="patient-select" class="select-patient">
+                            <option value="">데이터베이스 불러오는 중...</option>
+                        </select>
+                        
+                        <div style="margin-top:20px;">
+                            <h4 style="margin:0 0 12px 0; font-size:0.9rem; color:var(--text-primary); border-bottom:1px solid var(--border-color); padding-bottom:8px;">개인별 요약 지표</h4>
+                            <div class="patient-quick-stats" id="patient-quick-stats">
+                                <div style="color:var(--text-secondary); text-align:center; padding: 20px 0;">환자 ID를 선택하시면 요약 통계가 표시됩니다.</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="iframe-container">
+                        <iframe id="report-frame" src="about:blank"></iframe>
+                        <div id="iframe-loader" style="position:absolute; top:0; left:0; width:100%; height:100%; background-color:#1e293b; display:flex; justify-content:center; align-items:center; color:var(--text-secondary); font-size:1.1rem; font-weight:500;">
+                            환자를 선택하시면 성적표 HTML이 이곳에 직접 로드됩니다.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+
+    </div>
+
+    <footer>
+        <p>© 2026 Full Spectrum Biomedical Data Architecture Spec Dashboard. Developed by Antigravity.</p>
+    </footer>
+
+    <script>
+        const API_BASE = "";
+
+        // UI Elements
+        const fileStatusList = document.getElementById("file-status-list");
+        const dbPatients = document.getElementById("db-stat-patients");
+        const dbPrs = document.getElementById("db-stat-prs");
+        const dbRunId = document.getElementById("db-stat-runid");
+        const dbRunTime = document.getElementById("db-stat-runtime");
+        const dbRunStatus = document.getElementById("db-stat-runstatus");
+        const btnRunPipeline = document.getElementById("btn-run-pipeline");
+        const btnRunTests = document.getElementById("btn-run-tests");
+        const testRunnerList = document.getElementById("test-runner-list");
+        const terminalLog = document.getElementById("terminal-log");
+        const patientSelect = document.getElementById("patient-select");
+        const patientQuickStats = document.getElementById("patient-quick-stats");
+        const reportFrame = document.getElementById("report-frame");
+        const iframeLoader = document.getElementById("iframe-loader");
+
+        // Add message to console
+        function logToConsole(message, isError = false) {
+            const time = new Date().toLocaleTimeString();
+            const logLine = `[${time}] ${message}\n`;
+            if (isError) {
+                terminalLog.innerHTML += `<span style="color:var(--neon-red);">${logLine}</span>`;
+            } else {
+                terminalLog.innerHTML += logLine;
+            }
+            terminalLog.scrollTop = terminalLog.scrollHeight;
+        }
+
+        // Fetch System Status
+        async function fetchSystemStatus() {
+            try {
+                const res = await fetch(`${API_BASE}/system_status`);
+                const data = await res.json();
+                
+                // Render file list
+                const fileLabels = {
+                    vcf_gz: "genotypes.vcf.gz (원자료)",
+                    vcf_ann: "Annotated.vcf.gz (변이 ID 매핑)",
+                    gwas_tsv: "gwas_catalog_associations.tsv (GWAS 가중치)",
+                    health_raw: "health_raw.csv (검진 더미자료)",
+                    health_clean: "health_cleaned.csv (R 정제자료)",
+                    prs_profile: "prs_out.profile (PLINK 점수)",
+                    model_rdata: "model_results.RData (R 통계모델)",
+                    database: "bio_analysis.db (SQLite DB)"
+                };
+                
+                let fileHtml = "";
+                for (const [key, exists] of Object.entries(data.files)) {
+                    fileHtml += `
+                        <div class="file-item">
+                            <span class="file-name">${fileLabels[key] || key}</span>
+                            <span class="file-status ${exists ? 'status-pass' : 'status-fail'}">${exists ? '정상' : '누락'}</span>
+                        </div>
+                    `;
+                }
+                fileStatusList.innerHTML = fileHtml;
+
+                // Render DB Stats
+                dbPatients.innerText = data.database_stats.health_records_count;
+                dbPrs.innerText = data.database_stats.prs_results_count;
+                dbRunId.innerText = data.database_stats.last_run_id;
+                
+                // Format timestamp
+                if (data.database_stats.last_run_time !== "N/A") {
+                    const dt = new Date(data.database_stats.last_run_time);
+                    dbRunTime.innerText = dt.toLocaleString();
+                } else {
+                    dbRunTime.innerText = "-";
+                }
+                
+                dbRunStatus.innerText = data.database_stats.last_run_status;
+                dbRunStatus.style.color = data.database_stats.last_run_status === "SUCCESS" ? "var(--neon-green)" : "var(--neon-red)";
+                
+                // 실시간 DAG 모니터 렌더링
+                renderDAG(data.files);
+                
+                logToConsole("시스템 상태 및 파일 현황을 갱신하였습니다.");
+            } catch (err) {
+                logToConsole("시스템 상태를 불러오는 데 실패했습니다: " + err.message, true);
+            }
+        }
+
+        // Fetch Samples List
+        async function fetchSamples() {
+            try {
+                const res = await fetch(`${API_BASE}/samples`);
+                const data = await res.json();
+                
+                if (Array.isArray(data)) {
+                    let options = `<option value="">환자 ID를 선택해 주세요 (${data.length}명)</option>`;
+                    data.forEach(id => {
+                        options += `<option value="${id}">${id}</option>`;
+                    });
+                    patientSelect.innerHTML = options;
+                    logToConsole(`데이터베이스에서 ${data.length}명의 환자 목록을 로드했습니다.`);
+                } else {
+                    patientSelect.innerHTML = `<option value="">DB에 데이터가 없습니다.</option>`;
+                }
+            } catch (err) {
+                logToConsole("환자 목록을 불러오는 데 실패했습니다: " + err.message, true);
+                patientSelect.innerHTML = `<option value="">에러가 발생했습니다.</option>`;
+            }
+        }
+
+        // Run Snakemake Pipeline
+        btnRunPipeline.addEventListener("click", async () => {
+            btnRunPipeline.disabled = true;
+            btnRunPipeline.innerText = "🔄 실행 중...";
+            logToConsole("Snakemake 파이프라인 강제 재실행을 요청했습니다. 대용량 파일 분석 중이므로 약 1~2분이 소요될 수 있습니다...");
+            
+            try {
+                const res = await fetch(`${API_BASE}/run_pipeline`, { method: "POST" });
+                const data = await res.json();
+                
+                logToConsole("=== SNAKEMAKE TERMINAL OUTPUT ===");
+                data.log.forEach(line => logToConsole(line));
+                logToConsole("=================================");
+                
+                if (data.status === "SUCCESS") {
+                    logToConsole("파이프라인 실행 완료! 데이터베이스가 성공적으로 업데이트되었습니다.");
+                    await fetchSystemStatus();
+                    await fetchSamples();
+                } else {
+                    logToConsole("파이프라인 실행 도중 오류가 발생했습니다. 로그를 확인하세요.", true);
+                }
+            } catch (err) {
+                logToConsole("파이프라인 실행 요청 실패: " + err.message, true);
+            } finally {
+                btnRunPipeline.disabled = false;
+                btnRunPipeline.innerText = "🚀 파이프라인 재실행 (Snakemake)";
+            }
+        });
+
+        // Run Integration Tests
+        btnRunTests.addEventListener("click", async () => {
+            btnRunTests.disabled = true;
+            btnRunTests.innerText = "🔄 테스트 중...";
+            logToConsole("R 통합 테스트 슈트(run_tests.R) 실행 중...");
+            
+            try {
+                const res = await fetch(`${API_BASE}/run_tests`);
+                const tests = await res.json();
+                
+                let testListHtml = "";
+                let passedCount = 0;
+                
+                tests.forEach(test => {
+                    const isPass = test.status === "PASS";
+                    if (isPass) passedCount++;
+                    
+                    testListHtml += `
+                        <div class="test-card ${isPass ? 'pass' : 'fail'}">
+                            <div class="test-name">${test.test_name}</div>
+                            <div class="test-msg">${test.message}</div>
+                            <span class="test-badge" style="background-color:${isPass ? 'rgba(0,245,160,0.15)' : 'rgba(255,94,98,0.15)'}; color:${isPass ? 'var(--neon-green)' : 'var(--neon-red)'};">${test.status}</span>
+                        </div>
+                    `;
+                    logToConsole(`테스트 결과: ${test.test_name} -> [${test.status}] : ${test.message}`);
+                });
+                
+                testRunnerList.innerHTML = testListHtml;
+                logToConsole(`지속적 검증 완료: 총 ${tests.length}개 중 ${passedCount}개 통과.`);
+            } catch (err) {
+                logToConsole("통합 테스트 실행 실패: " + err.message, true);
+            } finally {
+                btnRunTests.disabled = false;
+                btnRunTests.innerText = "🔄 테스트 실행";
+            }
+        });
+
+        // Patient Selection change
+        patientSelect.addEventListener("change", async () => {
+            const userId = patientSelect.value;
+            if (!userId) {
+                patientQuickStats.innerHTML = `<div style="color:var(--text-secondary); text-align:center; padding: 20px 0;">환자 ID를 선택하시면 요약 통계가 표시됩니다.</div>`;
+                reportFrame.src = "about:blank";
+                iframeLoader.style.display = "flex";
+                iframeLoader.innerText = "환자를 선택하시면 성적표 HTML이 이곳에 직접 로드됩니다.";
+                return;
+            }
+            
+            iframeLoader.style.display = "flex";
+            iframeLoader.innerText = "유전체 건강성적표 실시간 렌더링 중...";
+            
+            try {
+                // Fetch Patient summary info
+                const res = await fetch(`${API_BASE}/get_prs?user_id=${userId}`);
+                const data = await res.json();
+                
+                if (data.error) {
+                    patientQuickStats.innerHTML = `<div style="color:var(--neon-red); text-align:center; padding: 20px 0;">${data.error}</div>`;
+                    iframeLoader.innerText = "환자 정보를 로드할 수 없습니다.";
+                    return;
+                }
+                
+                // Render quick stats
+                const riskColor = data.genomic_prs.risk_category === "High Risk" ? "var(--neon-red)" : (data.genomic_prs.risk_category === "Low Risk" ? "var(--neon-green)" : "var(--primary)");
+                patientQuickStats.innerHTML = `
+                    <div class="patient-stat-row">
+                        <span>나이 / 성별</span>
+                        <span style="font-weight:600;">${data.demographics.age}세 / ${data.demographics.gender === 'M' ? '남성' : '여성'}</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>체질량지수 (BMI)</span>
+                        <span style="font-weight:600;">${data.clinical_metrics.bmi} kg/m²</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>수축기/이완기 혈압</span>
+                        <span style="font-weight:600;">${data.clinical_metrics.blood_pressure} mmHg</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>총 콜레스테롤</span>
+                        <span style="font-weight:600; color:var(--neon-blue);">${data.clinical_metrics.cholesterol_observed} mg/dL</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>모델 예측 콜레스테롤</span>
+                        <span style="font-weight:600;">${data.predictions.predicted_cholesterol} mg/dL</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>공복 혈당</span>
+                        <span style="font-weight:600;">${data.clinical_metrics.glucose} mg/dL</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>PRS 표준화 점수</span>
+                        <span style="font-weight:600;">${data.genomic_prs.prs_standardized_score}</span>
+                    </div>
+                    <div class="patient-stat-row">
+                        <span>유전적 위험 백분위</span>
+                        <span style="font-weight:600; color:${riskColor};">${data.genomic_prs.percentile_rank} % (${data.genomic_prs.risk_category})</span>
+                    </div>
+                `;
+                
+                // Load Rmd report in iframe
+                reportFrame.src = `${API_BASE}/report?user_id=${userId}`;
+                reportFrame.onload = () => {
+                    iframeLoader.style.display = "none";
+                };
+                
+                logToConsole(`환자 ${userId}의 유전 정보 및 실시간 성적표를 조회했습니다.`);
+            } catch (err) {
+                logToConsole("환자 데이터를 가져오는 데 실패했습니다: " + err.message, true);
+                iframeLoader.innerText = "리포트 로드 에러.";
+            }
+        });
+
+        // Mermaid.js 초기화 설정
+        mermaid.initialize({ 
+            startOnLoad: false, 
+            theme: 'dark',
+            themeVariables: {
+                background: '#05070c',
+                primaryColor: '#151b2c',
+                primaryTextColor: '#f8fafc',
+                lineColor: '#242f4c'
+            }
+        });
+
+        // 파일 존재 여부에 따른 Snakemake DAG 실시간 모니터 렌더링 함수
+        function renderDAG(files) {
+            const container = document.getElementById("dag-container");
+            const uniqueId = "dag-" + Math.floor(Math.random() * 10000);
+            
+            const nodes = {
+                vcf_gz: "vcf_gz[\"genotypes.vcf.gz<br/>(VCF 원자료)\"]",
+                gwas_tsv: "gwas_tsv[\"gwas_catalog_associations.tsv<br/>(GWAS 가중치)\"]",
+                health_raw: "health_raw[\"health_raw.csv<br/>(검진 원자료)\"]",
+                vcf_ann: "vcf_ann[\"Annotated.vcf.gz<br/>(변이 ID 매핑)\"]",
+                prs_profile: "prs_profile[\"prs_out.profile<br/>(PLINK 점수)\"]",
+                health_clean: "health_clean[\"health_cleaned.csv<br/>(R 정제자료)\"]",
+                model_rdata: "model_rdata[\"model_results.RData<br/>(R 통계모델)\"]",
+                database: "database[\"bio_analysis.db<br/>(SQLite DB)\"]"
+            };
+
+            const edges = [
+                "vcf_gz --> health_raw",
+                "vcf_gz --> gwas_tsv",
+                "vcf_gz --> vcf_ann",
+                "gwas_tsv --> vcf_ann",
+                "vcf_ann --> prs_profile",
+                "gwas_tsv --> prs_profile",
+                "health_raw --> health_clean",
+                "health_clean --> model_rdata",
+                "prs_profile --> model_rdata",
+                "health_clean --> database",
+                "model_rdata --> database"
+            ];
+
+            let mermaidCode = "graph TD\n";
+            for (const [key, label] of Object.entries(nodes)) {
+                mermaidCode += `    ${label}\n`;
+            }
+            edges.forEach(edge => {
+                mermaidCode += `    ${edge}\n`;
+            });
+
+            // 스타일 적용 (존재하는 파일은 초록색, 누락된 파일은 빨간색 테두리)
+            mermaidCode += "\n    classDef pass stroke:#00f5a0,stroke-width:2px,fill:#152c22,color:#00f5a0;\n";
+            mermaidCode += "    classDef missing stroke:#ff5e62,stroke-width:1.5px,fill:#2c151b,color:#ff5e62;\n";
+
+            for (const [key, exists] of Object.entries(files)) {
+                if (nodes[key]) {
+                    const cls = exists ? "pass" : "missing";
+                    mermaidCode += `    class ${key} ${cls};\n`;
+                }
+            }
+
+            try {
+                // Mermaid 렌더링 호출
+                container.innerHTML = `<div class="mermaid" id="${uniqueId}-raw" style="display:none;">${mermaidCode}</div>`;
+                mermaid.render(uniqueId, mermaidCode).then(({ svg }) => {
+                    container.innerHTML = svg;
+                }).catch(err => {
+                    console.error("Mermaid 렌더링 중 에러:", err);
+                    container.innerHTML = `<div style="color:var(--neon-red); font-size:0.9rem; padding: 20px;">DAG 렌더링 에러: ${err.message}</div>`;
+                });
+            } catch (err) {
+                console.error("Mermaid 렌더링 초기화 중 에러:", err);
+                container.innerHTML = `<div style="color:var(--neon-red); font-size:0.9rem; padding: 20px;">DAG 초기화 에러: ${err.message}</div>`;
+            }
+        }
+
+        const connectionStatus = document.getElementById("connection-status");
+
+        function updateConnectionBadge(online) {
+            const dot = connectionStatus.querySelector("span");
+            if (online) {
+                connectionStatus.className = "status-badge status-online";
+                connectionStatus.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:var(--neon-green);"></span> API Server: PORT 8085 (온라인)';
+            } else {
+                connectionStatus.className = "status-badge status-offline";
+                connectionStatus.innerHTML = '<span style="display:inline-block; width:8px; height:8px; border-radius:50%; background-color:var(--neon-red);"></span> 서버 연결 끊김 (OFFLINE)';
+            }
+        }
+
+        function startHeartbeat() {
+            setInterval(async () => {
+                try {
+                    const res = await fetch(`${API_BASE}/system_status`);
+                    if (res.ok) {
+                        updateConnectionBadge(true);
+                    } else {
+                        updateConnectionBadge(false);
+                    }
+                } catch (err) {
+                    updateConnectionBadge(false);
+                }
+            }, 5000);
+        }
+
+        // Initialize dashboard
+        window.addEventListener("DOMContentLoaded", async () => {
+            logToConsole("대시보드 리소스 로드 중...");
+            await fetchSystemStatus();
+            await fetchSamples();
+            
+            // Start periodic heartbeat
+            startHeartbeat();
+            
+            // Auto run tests on start
+            btnRunTests.click();
+        });
+    </script>
+</body>
+</html>

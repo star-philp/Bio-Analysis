@@ -1,0 +1,377 @@
+---
+title: "Personalized Genomic & Clinical Health Report"
+output:
+  html_document:
+    theme: null
+    mathjax: null
+    highlight: null
+    self_contained: true
+params:
+  user_id: "HG00096"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message = FALSE, warning = FALSE)
+
+library(DBI)
+library(RSQLite)
+library(ggplot2)
+library(dplyr)
+
+# Paths relative to project root
+db_path <- "../database/bio_analysis.db"
+model_results_path <- "../Dataset/model_results.RData"
+
+# Load patient data
+con <- dbConnect(SQLite(), db_path)
+user_id <- params$user_id
+
+# Fetch records
+user_query <- dbSendQuery(con, "SELECT * FROM health_records WHERE user_id = ?")
+dbBind(user_query, list(user_id))
+patient <- dbFetch(user_query)
+dbClearResult(user_query)
+
+prs_query <- dbSendQuery(con, "SELECT * FROM prs_results WHERE user_id = ?")
+dbBind(prs_query, list(user_id))
+prs_data <- dbFetch(prs_query)
+dbClearResult(prs_query)
+
+# Fetch all PRS scores for population density plotting
+all_prs_df <- dbGetQuery(con, "SELECT prs_score, prs_standardized FROM prs_results")
+dbDisconnect(con)
+
+# Load model data
+load(model_results_path)
+
+# Calculations
+user_score <- prs_data$prs_score
+user_std_score <- prs_data$prs_standardized
+percentile <- round(mean(all_prs_df$prs_score <= user_score) * 100, 1)
+
+# Predictions
+pred_input <- data.frame(
+  prs_standardized = user_std_score,
+  age = patient$age,
+  gender = patient$gender,
+  bmi = patient$bmi,
+  stringsAsFactors = FALSE
+)
+pred_cholesterol <- round(predict(lm_model, newdata = pred_input), 1)
+
+# Risk Category
+risk_category <- if (percentile >= 80) "High Risk" else if (percentile <= 20) "Low Risk" else "Average"
+risk_color <- if (percentile >= 80) "#ef4444" else if (percentile <= 20) "#10b981" else "#3b82f6"
+
+# Texts for inline usage to avoid line break parsing issues in knitr
+risk_text <- if(percentile >= 80) {
+  "An elevated genetic score suggests a higher risk of cardiovascular/metabolic parameters associated with chromosome 22 variants. Early monitoring is recommended."
+} else if(percentile <= 20) {
+  "A low genetic score suggests a lower baseline hereditary risk, but lifestyle choices remain critical."
+} else {
+  "The patient's genomic risk is in the normal population distribution range."
+}
+
+chol_text <- if(patient$cholesterol > pred_cholesterol + 15) {
+  "The patient's observed cholesterol is significantly higher than model prediction, indicating potential secondary factors (such as dietary fats, low physical exercise, or smoking) playing a larger role. Prioritizing lifestyle intervention is highly recommended."
+} else if(patient$cholesterol < pred_cholesterol - 15) {
+  "The patient's observed cholesterol is lower than model prediction, which suggests beneficial lifestyle interventions or current medication might be mitigating genomic risks."
+} else {
+  "The observed cholesterol aligns well with the multi-variable genomic model prediction."
+}
+
+bmi_text <- if(patient$bmi >= 25) {
+  paste0("A BMI of <strong>", patient$bmi, "</strong> indicates a weight category that may exacerbate metabolic risks. We recommend a caloric deficit diet and increasing physical exercise (currently <strong>", patient$exercise_hours, " hours/week</strong>) towards a target of 5+ hours.")
+} else {
+  "Body mass index is within a healthy range. Maintaining standard dietary guidelines is recommended."
+}
+```
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap');
+
+body {
+  font-family: 'Outfit', sans-serif;
+  color: #1e293b;
+  background-color: #f8fafc;
+  line-height: 1.6;
+  margin: 0;
+  padding: 0;
+}
+
+.report-container {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 40px;
+  background-color: #ffffff;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+}
+
+.header-banner {
+  background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+  color: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  margin-bottom: 35px;
+  box-shadow: 0 4px 15px rgba(49, 46, 129, 0.15);
+}
+
+.header-banner h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  margin: 0 0 10px 0;
+  letter-spacing: -0.5px;
+}
+
+.header-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.95rem;
+  color: #c7d2fe;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-bottom: 35px;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 25px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px -8px rgba(0, 0, 0, 0.05);
+}
+
+.card-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #312e81;
+  margin-top: 0;
+  margin-bottom: 20px;
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.metric-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #f8fafc;
+}
+
+.metric-row:last-child {
+  border-bottom: none;
+}
+
+.metric-label {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.metric-value {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.highlight-box {
+  background-color: #f1f5f9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 15px;
+  text-align: center;
+}
+
+.badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+}
+
+.chart-section {
+  margin-bottom: 35px;
+}
+
+.chart-container {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+
+.clinical-notes {
+  background-color: #f8fafc;
+  border-left: 4px solid #312e81;
+  border-radius: 0 12px 12px 0;
+  padding: 20px;
+  margin-top: 30px;
+}
+
+.clinical-notes h3 {
+  color: #312e81;
+  margin-top: 0;
+  font-size: 1.15rem;
+  font-weight: 600;
+}
+
+.footer {
+  text-align: center;
+  margin-top: 50px;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 20px;
+}
+</style>
+
+<div class="report-container">
+
+  <!-- Header Banner -->
+  <div class="header-banner">
+    <h1>자동 건강성적표 & 유전체 분석 리포트</h1>
+    <div class="header-meta">
+      <span><strong>Patient ID:</strong> `r user_id`</span>
+      <span><strong>Report Date:</strong> `r format(Sys.Date(), "%B %d, %Y")`</span>
+      <span><strong>Pipeline Version:</strong> v1.0.0</span>
+    </div>
+  </div>
+
+  <!-- Main Profiles Grid -->
+  <div class="grid-2">
+    
+    <!-- Clinical Profile Card -->
+    <div class="card">
+      <div class="card-title">Clinical Profile 🩺</div>
+      <div class="metric-row">
+        <span class="metric-label">Age</span>
+        <span class="metric-value">`r patient$age` years</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Gender</span>
+        <span class="metric-value">`r ifelse(patient$gender == "M", "Male", "Female")`</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Body Mass Index (BMI)</span>
+        <span class="metric-value">`r patient$bmi` kg/m²</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Blood Pressure</span>
+        <span class="metric-value">`r patient$sbp`/`r patient$dbp` mmHg</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Fasting Glucose</span>
+        <span class="metric-value">`r patient$glucose` mg/dL</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Weekly Exercise</span>
+        <span class="metric-value">`r patient$exercise_hours` hours</span>
+      </div>
+    </div>
+
+    <!-- Genomic Profile Card -->
+    <div class="card">
+      <div class="card-title">Genomic Profile (PRS) 🧬</div>
+      <div class="metric-row">
+        <span class="metric-label">Raw PRS Score</span>
+        <span class="metric-value">`r round(user_score, 4)`</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Standardized PRS</span>
+        <span class="metric-value">`r round(user_std_score, 2)` (z-score)</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Population Percentile</span>
+        <span class="metric-value">`r percentile`th percentile</span>
+      </div>
+      <div class="metric-row">
+        <span class="metric-label">Genomic Risk Level</span>
+        <span class="metric-value">
+          <span class="badge" style="background-color: `r paste0(risk_color, '1a')`; color: `r risk_color`; border: 1px solid `r risk_color`;">
+            `r risk_category`
+          </span>
+        </span>
+      </div>
+      
+      <div class="highlight-box">
+        <div style="font-size: 0.9rem; color: #64748b; margin-bottom: 5px;">Genomic Predictive Insights</div>
+        <div style="font-size: 1.4rem; font-weight: 700; color: #1e1b4b;">`r patient$cholesterol` mg/dL</div>
+        <div style="font-size: 0.8rem; color: #64748b;">Observed Total Cholesterol</div>
+        <div style="font-size: 0.8rem; color: #3b82f6; margin-top: 5px;">Model Predicted: `r pred_cholesterol` mg/dL</div>
+      </div>
+    </div>
+    
+  </div>
+
+  <!-- Population Distribution Chart -->
+  <div class="chart-section">
+    <div class="chart-container">
+      <div style="font-size: 1.15rem; font-weight: 600; color: #312e81; margin-bottom: 15px;">Polygenic Risk Score (PRS) Population Distribution</div>
+      
+      ```{r prs_chart, fig.width=9, fig.height=4.5, fig.align='center', echo=FALSE}
+      # Generate a beautiful density plot using ggplot2
+      ggplot(all_prs_df, aes(x = prs_score)) +
+        geom_density(fill = "#c7d2fe", color = "#4f46e5", alpha = 0.4, linewidth = 1.2) +
+        geom_vline(xintercept = user_score, color = risk_color, linetype = "dashed", linewidth = 1.2) +
+        geom_point(data = data.frame(x = user_score, y = 0), aes(x = x, y = y), color = risk_color, size = 5, shape = 21, fill = "white", stroke = 3) +
+        annotate("text", x = user_score, y = Inf, label = paste("You (", percentile, "th %)", sep=""), 
+                 vjust = 2, hjust = ifelse(percentile > 50, 1.2, -0.2), color = risk_color, fontface = "bold", family = "Outfit", size = 4.5) +
+        labs(
+          x = "Polygenic Risk Score (PRS)",
+          y = "Density"
+        ) +
+        theme_minimal(base_family = "Outfit") +
+        theme(
+          plot.margin = margin(10, 10, 10, 10),
+          axis.title = element_text(size = 12, color = "#64748b"),
+          axis.text = element_text(size = 10, color = "#94a3b8"),
+          panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(color = "#f1f5f9")
+        )
+      ```
+    </div>
+  </div>
+
+  <!-- Recommendations & Insights -->
+  <div class="clinical-notes">
+    <h3>Physician Summary & Action Plan 📋</h3>
+    <p>This report integrates the patient's biological parameters with their genomic polygenic risk score (PRS) calculated across Chromosome 22 variants. Below is an interpretation and action plan:</p>
+    
+    <ul>
+      <li>
+        <strong>Genomic Risk Interpretation:</strong> The patient's genetic predisposition places them in the <strong>`r risk_category`</strong> category (PRS Percentile: <strong>`r percentile`%</strong>). 
+        `r risk_text`
+      </li>
+      <li>
+        <strong>Model Fit Analysis:</strong> The R statistical modeling predicts a total cholesterol level of <strong>`r pred_cholesterol` mg/dL</strong> based on genomic and clinical covariates. The patient's actual cholesterol is <strong>`r patient$cholesterol` mg/dL</strong>.
+        `r chol_text`
+      </li>
+      <li>
+        <strong>Recommended Lifestyle Modification:</strong>
+        `r bmi_text`
+      </li>
+    </ul>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>This report was automatically generated by the Bio-Analysis pipeline (Run ID: automated_report). Data is retrieved from the secure SQLite database warehouse. For clinical decisions, please consult a registered medical professional.</p>
+  </div>
+
+</div>

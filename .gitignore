@@ -1,0 +1,28 @@
+# Large Data Files (too large for GitHub)
+Dataset/*.vcf.gz
+Dataset/*.vcf.gz.tbi
+Dataset/Annotated.vcf.gz
+
+# Generated/Intermediate Data & Results
+Dataset/health_raw.csv
+Dataset/health_cleaned.csv
+Dataset/prs_out.*
+Dataset/gwas_weights.txt
+Dataset/model_results.RData
+
+# SQLite database
+database/*.db
+
+# Temporary directories and system files
+.snakemake/
+.DS_Store
+.Rhistory
+.RData
+.Ruserdata
+
+# Binaries
+bin/plink
+bin/prettify
+
+# User reports
+reports/report_*.html
